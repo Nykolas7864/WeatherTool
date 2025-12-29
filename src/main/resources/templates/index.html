@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Weather App</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; background: #f0f2f5; }
+        .card { background: white; padding: 20px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body th:style="'background: ' + ${weather != null ? weather.getVibeColor() : '#f0f2f5'}">
+<div class="card">
+
+    <h1>Kishxi's Weather Checker</h1>
+    <form action="/weather" method="get">
+        <input type="text" name="city" placeholder="Enter city..." required>
+
+        <select name="units" class="form-select w-25 d-inline">
+            <option value="metric">Celsius (°C)</option>
+            <option value="imperial">Fahrenheit (°F)</option>
+        </select>
+        <button type="submit">Check</button>
+    </form>
+    <hr>
+
+    <div th:if="${weather}">
+        <h2>
+            <img th:if="${weather.iconCode != null}"
+                 th:src="${'https://openweathermap.org/img/wn/' + weather.iconCode + '@2x.png'}"
+                 alt="Weather Icon" style="vertical-align: middle; width: 50px;">
+
+            <span th:text="${weather.city}">City</span>
+            <span th:if="${weather.state != null and !weather.state.isEmpty()}"
+                  th:text="', ' + ${weather.state}">, State</span>,
+            <span th:text="${weather.country}" style="color: #666; font-size: 0.8em;">US</span>
+        </h2>
+
+        <p>
+            Temperature:
+            <span th:text="${#numbers.formatDecimal(weather.temperature, 1, 1)}">0.0</span>
+            <span th:text="${weather.unitLabel}">°C</span>
+        </p>
+
+        <p>Condition: <span th:text="${weather.description}">Cloudy</span></p>
+
+        <p style="font-weight: bold; color: #555;">
+            🕒 Local Time: <span th:text="${weather.localTime}">12:00 PM</span>
+        </p>
+    </div>
+
+    <div th:if="${error}" style="color: red; margin-top: 10px;" th:text="${error}"></div>
+
+    <div style="margin-top: 30px;" th:if="${not #lists.isEmpty(topCities)}">
+        <h3 style="margin-bottom: 10px;">🔥 Trending Cities</h3>
+        <table border="1" style="margin: 0 auto; width: 100%; border-collapse: collapse; background: #fafafa;">
+            <thead>
+            <tr style="background-color: #eee;">
+                <th style="padding: 5px;">City</th>
+                <th style="padding: 5px;">Searches</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="stat : ${topCities}">
+                <td style="padding: 5px;">
+                    <a th:href="@{/weather(city=${stat.city}, units=${weather != null ? (weather.unitLabel == '°F' ? 'imperial' : 'metric') : 'metric'})}"
+                       th:text="${stat.city}"
+                       style="text-decoration: none; color: blue; font-weight: bold;">
+                        City Name
+                    </a>
+                </td>
+                <td style="padding: 5px;" th:text="${stat.count}">1</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <a href="/history" style="color: #007bff; font-weight: bold;">📜 View Full Search History</a>
+    </div>
+</div>
+</body>
+</html>
