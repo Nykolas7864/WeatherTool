@@ -18,5 +18,6 @@ RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 RUN npx prisma generate
-EXPOSE 3001
-CMD ["node", "dist/index.js"]
+
+# Use shell form to run prisma db push then start server
+CMD npx prisma db push --skip-generate && node dist/index.js
