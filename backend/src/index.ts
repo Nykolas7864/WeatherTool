@@ -348,7 +348,7 @@ app.get('/health', (req, res) => {
 console.log('Starting Weather Tool API...');
 console.log('PORT:', PORT);
 console.log('DATABASE_URL set:', !!process.env.DATABASE_URL);
-console.log('OPENWEATHERMAP_API_KEY set:', !!process.env.OPENWEATHERMAP_API_KEY);
+console.log('WEATHER_API_KEY set:', !!process.env.WEATHER_API_KEY);
 
 async function main() {
   try {

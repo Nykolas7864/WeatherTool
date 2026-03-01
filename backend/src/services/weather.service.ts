@@ -30,13 +30,12 @@ function getVibeColor(temperature: number, unitLabel: string): string {
 }
 
 export class WeatherService {
-  private apiKey: string;
-
-  constructor() {
-    this.apiKey = process.env.WEATHER_API_KEY || '';
-    if (!this.apiKey) {
+  private get apiKey(): string {
+    const key = process.env.WEATHER_API_KEY || '';
+    if (!key) {
       console.warn('WEATHER_API_KEY not set in environment variables');
     }
+    return key;
   }
 
   async getGeoLocation(city: string): Promise<GeoLocation | null> {
