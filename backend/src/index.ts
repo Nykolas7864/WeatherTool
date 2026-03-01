@@ -7,8 +7,26 @@ import prisma from './prisma';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const allowedOrigins = process.env.FRONTEND_URL 
+  ? [process.env.FRONTEND_URL, process.env.FRONTEND_URL.replace(/\/$/, '')]
+  : ['*'];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    // Allow all if no FRONTEND_URL is set
+    if (!process.env.FRONTEND_URL) return callback(null, true);
+    
+    // Check if origin matches
+    if (allowedOrigins.includes(origin) || origin.includes('railway.app')) {
+      return callback(null, true);
+    }
+    
+    console.log('CORS blocked origin:', origin);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());
