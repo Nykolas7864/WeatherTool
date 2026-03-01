@@ -345,22 +345,35 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-async function main() {
-  // Start server first so healthcheck passes
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+console.log('Starting Weather Tool API...');
+console.log('PORT:', PORT);
+console.log('DATABASE_URL set:', !!process.env.DATABASE_URL);
+console.log('OPENWEATHERMAP_API_KEY set:', !!process.env.OPENWEATHERMAP_API_KEY);
 
-  // Then try to connect to database
+async function main() {
   try {
-    await prisma.$connect();
-    console.log('Database connected successfully');
+    // Start server first so healthcheck passes
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+
+    // Then try to connect to database
+    try {
+      await prisma.$connect();
+      console.log('Database connected successfully');
+    } catch (error) {
+      console.error('Failed to connect to database:', error);
+      console.log('Server will continue running - database operations may fail');
+    }
   } catch (error) {
-    console.error('Failed to connect to database:', error);
-    console.log('Server will continue running - database operations may fail');
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
 }
 
-main();
+main().catch((error) => {
+  console.error('Unhandled error in main:', error);
+  process.exit(1);
+});
 
 export default app;

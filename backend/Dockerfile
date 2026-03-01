@@ -19,5 +19,5 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 RUN npx prisma generate
 
-# Use shell form to run prisma db push then start server
-CMD npx prisma db push --skip-generate && node dist/index.js
+# Start server directly - prisma will connect when needed
+CMD ["node", "dist/index.js"]
