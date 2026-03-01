@@ -1,6 +1,6 @@
 import type { WeatherData, WeatherForecast, SearchRecord, CityStats, FavoriteCity, Units } from '../types/weather';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export async function fetchWeather(city: string, units: Units = 'metric'): Promise<WeatherData> {
   const response = await fetch(`${API_BASE}/weather?city=${encodeURIComponent(city)}&units=${units}`);

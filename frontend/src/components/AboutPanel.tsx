@@ -6,6 +6,10 @@ interface AboutPanelProps {
 
 export function AboutPanel({ darkMode }: AboutPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
+  
+  const apiDocsUrl = import.meta.env.VITE_API_URL 
+    ? import.meta.env.VITE_API_URL.replace('/api', '') 
+    : window.location.origin.replace(':5173', ':3001');
 
   return (
     <>
@@ -106,7 +110,7 @@ export function AboutPanel({ darkMode }: AboutPanelProps) {
                 and more programmatically.
               </p>
               <a
-                href="http://localhost:3001"
+                href={apiDocsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 ${
