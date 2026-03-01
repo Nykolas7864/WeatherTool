@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SearchRecord {
+  id          Int      @id @default(autoincrement())
+  city        String
+  state       String?
+  country     String
+  temperature Float
+  iconCode    String
+  unitLabel   String
+  localTime   String
+  searchTime  DateTime @default(now())
+
+  @@map("search_records")
+}
+
+model FavoriteCity {
+  id      Int      @id @default(autoincrement())
+  city    String
+  country String
+  addedAt DateTime @default(now())
+
+  @@unique([city, country])
+  @@map("favorite_cities")
+}
