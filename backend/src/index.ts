@@ -4,6 +4,14 @@ import cors from 'cors';
 import weatherRoutes from './routes/weather.routes';
 import prisma from './prisma';
 
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
