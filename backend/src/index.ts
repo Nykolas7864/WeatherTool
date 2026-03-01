@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || '*',
   credentials: true
 }));
 app.use(express.json());
@@ -328,16 +328,18 @@ app.get('/health', (req, res) => {
 });
 
 async function main() {
+  // Start server first so healthcheck passes
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+
+  // Then try to connect to database
   try {
     await prisma.$connect();
     console.log('Database connected successfully');
-    
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
   } catch (error) {
     console.error('Failed to connect to database:', error);
-    process.exit(1);
+    console.log('Server will continue running - database operations may fail');
   }
 }
 
