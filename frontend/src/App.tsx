@@ -83,10 +83,6 @@ function App() {
   }, [loadInitialData]);
 
   const handleSearch = async (city: string) => {
-    // #region agent log
-    console.log('[DEBUG-06a8d5] handleSearch called', { city, units, currentWeatherCity: weather?.city });
-    // #endregion
-    
     setIsLoading(true);
     setError(null);
 
@@ -95,15 +91,6 @@ function App() {
         fetchWeather(city, units),
         fetchForecast(city, units)
       ]);
-      
-      // #region agent log
-      console.log('[DEBUG-06a8d5] API response received', { 
-        requestedCity: city, 
-        returnedCity: weatherData.city,
-        returnedCountry: weatherData.country 
-      });
-      // #endregion
-      
       setWeather(weatherData);
       setForecast(forecastData);
       
@@ -123,18 +110,12 @@ function App() {
   };
 
   // Convert temperatures locally - NO API call needed
-  // Uses currentUnits (the old value) to convert to newUnits
   const handleUnitsChange = (newUnits: Units) => {
-    // #region agent log
-    console.log('[DEBUG-06a8d5] handleUnitsChange called', { newUnits, currentUnits: units, weatherCity: weather?.city });
-    // #endregion
-    
-    const currentUnits = units; // Capture current value before state update
+    const currentUnits = units;
     if (newUnits === currentUnits) return;
     
     const newUnitLabel = newUnits === 'imperial' ? '°F' : '°C';
     
-    // Update all state together to ensure simultaneous render
     if (weather && forecast) {
       const newWeather = {
         ...weather,
@@ -152,16 +133,6 @@ function App() {
         }))
       };
       
-      // #region agent log
-      console.log('[DEBUG-06a8d5] Converting temps locally', { 
-        oldCity: weather.city, 
-        newCity: newWeather.city,
-        oldTemp: weather.temperature,
-        newTemp: newWeather.temperature 
-      });
-      // #endregion
-      
-      // Batch state updates
       setUnits(newUnits);
       setWeather(newWeather);
       setForecast(newForecast);
