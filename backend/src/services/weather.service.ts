@@ -4,13 +4,62 @@ import { WeatherData, WeatherForecast, ForecastDay, GeoLocation, CityStats, Sear
 
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org';
 
+// US state abbreviations that should stay uppercase
+const US_STATE_ABBREVS = new Set([
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
+]);
+
 function capitalizeWords(str: string): string {
   return str
     .trim()
-    .toLowerCase()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .split(/[\s,]+/)  // Split on spaces or commas
+    .map(word => {
+      const upper = word.toUpperCase();
+      // Keep state abbreviations uppercase
+      if (US_STATE_ABBREVS.has(upper)) {
+        return upper;
+      }
+      // Regular title case for other words
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
     .join(' ');
+}
+
+// Parse city input to extract city, state, and country components
+function parseCityInput(input: string): { city: string; state?: string; country?: string } {
+  const parts = input.split(',').map(p => p.trim());
+  
+  if (parts.length === 1) {
+    return { city: capitalizeWords(parts[0]) };
+  }
+  
+  if (parts.length === 2) {
+    const secondPart = parts[1].toUpperCase();
+    // Check if second part is a US state abbreviation
+    if (US_STATE_ABBREVS.has(secondPart)) {
+      return { city: capitalizeWords(parts[0]), state: secondPart, country: 'US' };
+    }
+    // Check if it's a country code (2 letters)
+    if (secondPart.length === 2) {
+      return { city: capitalizeWords(parts[0]), country: secondPart };
+    }
+    // Otherwise treat as state name
+    return { city: capitalizeWords(parts[0]), state: capitalizeWords(parts[1]) };
+  }
+  
+  if (parts.length >= 3) {
+    return {
+      city: capitalizeWords(parts[0]),
+      state: capitalizeWords(parts[1]),
+      country: parts[2].toUpperCase()
+    };
+  }
+  
+  return { city: capitalizeWords(input) };
 }
 
 function formatLocalTime(timezoneOffsetSeconds: number): string {
@@ -39,13 +88,19 @@ export class WeatherService {
   }
 
   async getGeoLocation(city: string): Promise<GeoLocation | null> {
-    const normalizedCity = capitalizeWords(city);
-    const encodedCity = encodeURIComponent(normalizedCity);
+    const parsed = parseCityInput(city);
     
-    const geoUrl = `${OPENWEATHER_BASE_URL}/geo/1.0/direct?q=${encodedCity}&limit=1&appid=${this.apiKey}`;
+    // Build query string: city,state,country format for OpenWeatherMap
+    let queryParts = [parsed.city];
+    if (parsed.state) queryParts.push(parsed.state);
+    if (parsed.country) queryParts.push(parsed.country);
+    const query = queryParts.join(',');
+    const encodedQuery = encodeURIComponent(query);
+    
+    const geoUrl = `${OPENWEATHER_BASE_URL}/geo/1.0/direct?q=${encodedQuery}&limit=5&appid=${this.apiKey}`;
     
     // #region agent log
-    console.log('[DEBUG] Geocoding request:', JSON.stringify({inputCity:city,normalizedCity,encodedCity}));
+    console.log('[DEBUG] Geocoding request:', JSON.stringify({inputCity:city,parsed,query,encodedQuery}));
     // #endregion
     
     try {
@@ -53,7 +108,30 @@ export class WeatherService {
       // #region agent log
       console.log('[DEBUG] Geocoding response:', JSON.stringify(response.data));
       // #endregion
+      
       if (response.data && response.data.length > 0) {
+        // If user specified a state, try to find a matching result
+        if (parsed.state) {
+          const stateMatch = response.data.find((r: any) => {
+            const resultState = (r.state || '').toUpperCase();
+            const searchState = parsed.state!.toUpperCase();
+            // Match full state name or abbreviation
+            return resultState === searchState || 
+                   resultState.startsWith(searchState) ||
+                   searchState.startsWith(resultState.substring(0, 2));
+          });
+          if (stateMatch) {
+            return {
+              lat: stateMatch.lat,
+              lon: stateMatch.lon,
+              name: stateMatch.name,
+              state: stateMatch.state || undefined,
+              country: stateMatch.country
+            };
+          }
+        }
+        
+        // Default to first result
         const result = response.data[0];
         return {
           lat: result.lat,
