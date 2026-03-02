@@ -315,6 +315,21 @@ function App() {
             </span>
             API
           </p>
+          <p className="mt-2">
+            Built by{' '}
+            <a 
+              href="https://kishxi.netlify.app/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className={`font-semibold transition-colors duration-200 ${
+                darkMode 
+                  ? 'text-purple-400 hover:text-purple-300' 
+                  : 'text-indigo-600 hover:text-indigo-500'
+              }`}
+            >
+              Kishxi
+            </a>
+          </p>
         </footer>
       </div>
 
