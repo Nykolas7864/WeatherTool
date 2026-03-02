@@ -220,7 +220,7 @@ const apiDocsHtml = `
           API Online
         </span>
       </div>
-      <a href="http://localhost:5173" class="frontend-link">Open Weather App</a>
+      <a href="{{FRONTEND_URL}}" class="frontend-link">Open Weather App</a>
     </header>
 
     <div class="card">
@@ -344,7 +344,9 @@ DELETE /api/favorites/1
 `;
 
 app.get('/', (req, res) => {
-  res.send(apiDocsHtml);
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const html = apiDocsHtml.replace('{{FRONTEND_URL}}', frontendUrl);
+  res.send(html);
 });
 
 app.use('/api', weatherRoutes);
