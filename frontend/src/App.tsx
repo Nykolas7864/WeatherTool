@@ -44,7 +44,6 @@ function App() {
   const [topCities, setTopCities] = useState<CityStats[]>([]);
   const [favorites, setFavorites] = useState<FavoriteCity[]>([]);
   const [units, setUnits] = useState<Units>('metric');
-  const [baseUnits, setBaseUnits] = useState<Units>('metric'); // Track what units the API data is in
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(() => {
@@ -84,6 +83,10 @@ function App() {
   }, [loadInitialData]);
 
   const handleSearch = async (city: string) => {
+    // #region agent log
+    console.log('[DEBUG-06a8d5] handleSearch called', { city, units, currentWeatherCity: weather?.city });
+    // #endregion
+    
     setIsLoading(true);
     setError(null);
 
@@ -92,9 +95,17 @@ function App() {
         fetchWeather(city, units),
         fetchForecast(city, units)
       ]);
+      
+      // #region agent log
+      console.log('[DEBUG-06a8d5] API response received', { 
+        requestedCity: city, 
+        returnedCity: weatherData.city,
+        returnedCountry: weatherData.country 
+      });
+      // #endregion
+      
       setWeather(weatherData);
       setForecast(forecastData);
-      setBaseUnits(units); // Track what units the API returned
       
       const [historyData, topCitiesData] = await Promise.all([
         fetchHistory(),
@@ -112,33 +123,59 @@ function App() {
   };
 
   // Convert temperatures locally - NO API call needed
+  // Uses currentUnits (the old value) to convert to newUnits
   const handleUnitsChange = (newUnits: Units) => {
-    if (newUnits === units) return;
+    // #region agent log
+    console.log('[DEBUG-06a8d5] handleUnitsChange called', { newUnits, currentUnits: units, weatherCity: weather?.city });
+    // #endregion
     
-    setUnits(newUnits);
+    const currentUnits = units; // Capture current value before state update
+    if (newUnits === currentUnits) return;
     
-    if (weather) {
-      const newUnitLabel = newUnits === 'imperial' ? '°F' : '°C';
-      
-      // Convert weather data
-      setWeather({
+    const newUnitLabel = newUnits === 'imperial' ? '°F' : '°C';
+    
+    // Update all state together to ensure simultaneous render
+    if (weather && forecast) {
+      const newWeather = {
         ...weather,
-        temperature: Math.round(convertTemperature(weather.temperature, units, newUnits) * 10) / 10,
-        feelsLike: Math.round(convertTemperature(weather.feelsLike, units, newUnits) * 10) / 10,
+        temperature: Math.round(convertTemperature(weather.temperature, currentUnits, newUnits) * 10) / 10,
+        feelsLike: Math.round(convertTemperature(weather.feelsLike, currentUnits, newUnits) * 10) / 10,
         unitLabel: newUnitLabel
-      });
-    }
-    
-    if (forecast) {
-      // Convert forecast data
-      setForecast({
+      };
+      
+      const newForecast = {
         ...forecast,
         forecast: forecast.forecast.map(day => ({
           ...day,
-          tempMin: Math.round(convertTemperature(day.tempMin, units, newUnits) * 10) / 10,
-          tempMax: Math.round(convertTemperature(day.tempMax, units, newUnits) * 10) / 10
+          tempMin: Math.round(convertTemperature(day.tempMin, currentUnits, newUnits) * 10) / 10,
+          tempMax: Math.round(convertTemperature(day.tempMax, currentUnits, newUnits) * 10) / 10
         }))
+      };
+      
+      // #region agent log
+      console.log('[DEBUG-06a8d5] Converting temps locally', { 
+        oldCity: weather.city, 
+        newCity: newWeather.city,
+        oldTemp: weather.temperature,
+        newTemp: newWeather.temperature 
       });
+      // #endregion
+      
+      // Batch state updates
+      setUnits(newUnits);
+      setWeather(newWeather);
+      setForecast(newForecast);
+    } else if (weather) {
+      const newWeather = {
+        ...weather,
+        temperature: Math.round(convertTemperature(weather.temperature, currentUnits, newUnits) * 10) / 10,
+        feelsLike: Math.round(convertTemperature(weather.feelsLike, currentUnits, newUnits) * 10) / 10,
+        unitLabel: newUnitLabel
+      };
+      setUnits(newUnits);
+      setWeather(newWeather);
+    } else {
+      setUnits(newUnits);
     }
   };
 
