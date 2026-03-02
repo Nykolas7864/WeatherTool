@@ -4,62 +4,82 @@ import { WeatherData, WeatherForecast, ForecastDay, GeoLocation, CityStats, Sear
 
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org';
 
-// US state abbreviations that should stay uppercase
-const US_STATE_ABBREVS = new Set([
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
-]);
+// US state abbreviations mapped to full names
+const US_STATE_MAP: Record<string, string> = {
+  'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+  'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
+  'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
+  'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+  'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi', 'MO': 'Missouri',
+  'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey',
+  'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio',
+  'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+  'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont',
+  'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'District of Columbia'
+};
+
+// Reverse map: full state name to abbreviation
+const US_STATE_NAME_TO_ABBREV: Record<string, string> = Object.fromEntries(
+  Object.entries(US_STATE_MAP).map(([abbrev, name]) => [name.toUpperCase(), abbrev])
+);
 
 function capitalizeWords(str: string): string {
   return str
     .trim()
-    .split(/[\s,]+/)  // Split on spaces or commas
-    .map(word => {
-      const upper = word.toUpperCase();
-      // Keep state abbreviations uppercase
-      if (US_STATE_ABBREVS.has(upper)) {
-        return upper;
-      }
-      // Regular title case for other words
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    })
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 
-// Parse city input to extract city, state, and country components
-function parseCityInput(input: string): { city: string; state?: string; country?: string } {
+// Parse city input and build the optimal query for OpenWeatherMap geocoding API
+// The API works best with format: "City,StateAbbrev,CountryCode" (e.g., "Allen,TX,US")
+function buildGeoQuery(input: string): string {
   const parts = input.split(',').map(p => p.trim());
   
   if (parts.length === 1) {
-    return { city: capitalizeWords(parts[0]) };
+    // Just city name
+    return capitalizeWords(parts[0]);
   }
   
   if (parts.length === 2) {
-    const secondPart = parts[1].toUpperCase();
+    const city = capitalizeWords(parts[0]);
+    const secondPart = parts[1].trim().toUpperCase();
+    
     // Check if second part is a US state abbreviation
-    if (US_STATE_ABBREVS.has(secondPart)) {
-      return { city: capitalizeWords(parts[0]), state: secondPart, country: 'US' };
+    if (US_STATE_MAP[secondPart]) {
+      // Use format: City,StateAbbrev,US (this is what works best with the API)
+      return `${city},${secondPart},US`;
     }
-    // Check if it's a country code (2 letters)
+    
+    // Check if second part is a full US state name
+    const stateAbbrev = US_STATE_NAME_TO_ABBREV[secondPart];
+    if (stateAbbrev) {
+      return `${city},${stateAbbrev},US`;
+    }
+    
+    // Check if it's a 2-letter country code
     if (secondPart.length === 2) {
-      return { city: capitalizeWords(parts[0]), country: secondPart };
+      return `${city},${secondPart}`;
     }
-    // Otherwise treat as state name
-    return { city: capitalizeWords(parts[0]), state: capitalizeWords(parts[1]) };
+    
+    // Otherwise just pass it through (might be a region name)
+    return `${city},${capitalizeWords(parts[1])}`;
   }
   
   if (parts.length >= 3) {
-    return {
-      city: capitalizeWords(parts[0]),
-      state: capitalizeWords(parts[1]),
-      country: parts[2].toUpperCase()
-    };
+    const city = capitalizeWords(parts[0]);
+    const state = parts[1].trim();
+    const country = parts[2].trim().toUpperCase();
+    
+    // Convert full state name to abbreviation if needed
+    const stateUpper = state.toUpperCase();
+    const stateAbbrev = US_STATE_MAP[stateUpper] ? stateUpper : US_STATE_NAME_TO_ABBREV[stateUpper] || state;
+    
+    return `${city},${stateAbbrev},${country}`;
   }
   
-  return { city: capitalizeWords(input) };
+  return capitalizeWords(input);
 }
 
 function formatLocalTime(timezoneOffsetSeconds: number): string {
@@ -88,19 +108,13 @@ export class WeatherService {
   }
 
   async getGeoLocation(city: string): Promise<GeoLocation | null> {
-    const parsed = parseCityInput(city);
-    
-    // Build query string: city,state,country format for OpenWeatherMap
-    let queryParts = [parsed.city];
-    if (parsed.state) queryParts.push(parsed.state);
-    if (parsed.country) queryParts.push(parsed.country);
-    const query = queryParts.join(',');
+    const query = buildGeoQuery(city);
     const encodedQuery = encodeURIComponent(query);
     
-    const geoUrl = `${OPENWEATHER_BASE_URL}/geo/1.0/direct?q=${encodedQuery}&limit=5&appid=${this.apiKey}`;
+    const geoUrl = `${OPENWEATHER_BASE_URL}/geo/1.0/direct?q=${encodedQuery}&limit=1&appid=${this.apiKey}`;
     
     // #region agent log
-    console.log('[DEBUG] Geocoding request:', JSON.stringify({inputCity:city,parsed,query,encodedQuery}));
+    console.log('[DEBUG] Geocoding request:', JSON.stringify({inputCity: city, query, encodedQuery}));
     // #endregion
     
     try {
@@ -110,28 +124,6 @@ export class WeatherService {
       // #endregion
       
       if (response.data && response.data.length > 0) {
-        // If user specified a state, try to find a matching result
-        if (parsed.state) {
-          const stateMatch = response.data.find((r: any) => {
-            const resultState = (r.state || '').toUpperCase();
-            const searchState = parsed.state!.toUpperCase();
-            // Match full state name or abbreviation
-            return resultState === searchState || 
-                   resultState.startsWith(searchState) ||
-                   searchState.startsWith(resultState.substring(0, 2));
-          });
-          if (stateMatch) {
-            return {
-              lat: stateMatch.lat,
-              lon: stateMatch.lon,
-              name: stateMatch.name,
-              state: stateMatch.state || undefined,
-              country: stateMatch.country
-            };
-          }
-        }
-        
-        // Default to first result
         const result = response.data[0];
         return {
           lat: result.lat,
