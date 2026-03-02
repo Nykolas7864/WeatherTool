@@ -20,6 +20,23 @@ import {
 } from './services/api';
 import type { WeatherData, WeatherForecast, SearchRecord, CityStats, FavoriteCity, Units } from './types/weather';
 
+// Temperature conversion utilities
+function celsiusToFahrenheit(celsius: number): number {
+  return (celsius * 9/5) + 32;
+}
+
+function fahrenheitToCelsius(fahrenheit: number): number {
+  return (fahrenheit - 32) * 5/9;
+}
+
+function convertTemperature(temp: number, fromUnit: Units, toUnit: Units): number {
+  if (fromUnit === toUnit) return temp;
+  if (fromUnit === 'metric' && toUnit === 'imperial') {
+    return celsiusToFahrenheit(temp);
+  }
+  return fahrenheitToCelsius(temp);
+}
+
 function App() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [forecast, setForecast] = useState<WeatherForecast | null>(null);
@@ -27,6 +44,7 @@ function App() {
   const [topCities, setTopCities] = useState<CityStats[]>([]);
   const [favorites, setFavorites] = useState<FavoriteCity[]>([]);
   const [units, setUnits] = useState<Units>('metric');
+  const [baseUnits, setBaseUnits] = useState<Units>('metric'); // Track what units the API data is in
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(() => {
@@ -76,6 +94,7 @@ function App() {
       ]);
       setWeather(weatherData);
       setForecast(forecastData);
+      setBaseUnits(units); // Track what units the API returned
       
       const [historyData, topCitiesData] = await Promise.all([
         fetchHistory(),
@@ -92,22 +111,34 @@ function App() {
     }
   };
 
-  const handleUnitsChange = async (newUnits: Units) => {
+  // Convert temperatures locally - NO API call needed
+  const handleUnitsChange = (newUnits: Units) => {
+    if (newUnits === units) return;
+    
     setUnits(newUnits);
+    
     if (weather) {
-      setIsLoading(true);
-      try {
-        const [weatherData, forecastData] = await Promise.all([
-          fetchWeather(weather.city, newUnits),
-          fetchForecast(weather.city, newUnits)
-        ]);
-        setWeather(weatherData);
-        setForecast(forecastData);
-      } catch (err: any) {
-        setError(err.message || 'Failed to update weather data');
-      } finally {
-        setIsLoading(false);
-      }
+      const newUnitLabel = newUnits === 'imperial' ? '°F' : '°C';
+      
+      // Convert weather data
+      setWeather({
+        ...weather,
+        temperature: Math.round(convertTemperature(weather.temperature, units, newUnits) * 10) / 10,
+        feelsLike: Math.round(convertTemperature(weather.feelsLike, units, newUnits) * 10) / 10,
+        unitLabel: newUnitLabel
+      });
+    }
+    
+    if (forecast) {
+      // Convert forecast data
+      setForecast({
+        ...forecast,
+        forecast: forecast.forecast.map(day => ({
+          ...day,
+          tempMin: Math.round(convertTemperature(day.tempMin, units, newUnits) * 10) / 10,
+          tempMax: Math.round(convertTemperature(day.tempMax, units, newUnits) * 10) / 10
+        }))
+      });
     }
   };
 

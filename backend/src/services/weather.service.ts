@@ -168,12 +168,13 @@ export class WeatherService {
       const response = await axios.get(weatherUrl);
       const data = response.data;
 
-      const cityNameFromApi = data.name;
-      const country = data.sys.country;
+      // Use city name from geocoding (more accurate) rather than weather API (can return neighborhood names)
+      const cityName = geoLocation.name;
+      const country = geoLocation.country;
       const temperature = data.main.temp;
       
       // #region agent log
-      console.log('[DEBUG] Weather API response:', JSON.stringify({cityNameFromApi,country,temperature,coord:data.coord,timezone:data.timezone}));
+      console.log('[DEBUG] Weather API response:', JSON.stringify({cityNameFromApi: data.name, geoName: cityName, country, temperature, coord: data.coord, timezone: data.timezone}));
       // #endregion
       const description = data.weather[0].description;
       const iconCode = data.weather[0].icon;
@@ -183,11 +184,11 @@ export class WeatherService {
       const windSpeed = data.wind.speed;
       const feelsLike = data.main.feels_like;
 
-      console.log(`>>> SUCCESS: Found weather for ${normalizedCity} via API`);
+      console.log(`>>> SUCCESS: Found weather for ${cityName} via API`);
 
       await prisma.searchRecord.create({
         data: {
-          city: cityNameFromApi,
+          city: cityName,
           state,
           country,
           temperature,
@@ -198,7 +199,7 @@ export class WeatherService {
       });
 
       return {
-        city: cityNameFromApi,
+        city: cityName,
         state,
         country,
         temperature,
@@ -261,9 +262,10 @@ export class WeatherService {
 
       const forecast = Array.from(dailyForecasts.values()).slice(0, 5);
 
+      // Use city name from geocoding (more accurate) rather than forecast API
       return {
-        city: data.city.name,
-        country: data.city.country,
+        city: geoLocation.name,
+        country: geoLocation.country,
         forecast
       };
     } catch (error: any) {
