@@ -269,6 +269,22 @@ GET /api/weather/forecast?city=Tokyo&units=metric
 Response: { city, country, forecast: [{ date, tempMin, tempMax, description, iconCode }] }
         </div>
       </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method method-get">GET</span>
+          <span class="path">/api/weather/reverse-geocode</span>
+        </div>
+        <p class="description">Convert coordinates to city name (for geolocation)</p>
+        <p class="params">
+          Query params: <code>lat</code> (required), <code>lon</code> (required)
+        </p>
+        <a href="/api/weather/reverse-geocode?lat=33.1&lon=-96.69" target="_blank" class="try-link">Try it (Allen, TX coords)</a>
+        <div class="example">
+GET /api/weather/reverse-geocode?lat=33.1&lon=-96.69
+
+Response: { city, state, country }
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -336,7 +352,7 @@ DELETE /api/favorites/1
     </div>
 
     <footer>
-      <p>Weather Tool API v1.0 | Powered by OpenWeatherMap</p>
+      <p>Weather Tool API v1.1 | Powered by OpenWeatherMap</p>
     </footer>
   </div>
 </body>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { changelog, currentVersion } from '../data/changelog';
 
 interface AboutPanelProps {
   darkMode: boolean;
@@ -6,6 +7,7 @@ interface AboutPanelProps {
 
 export function AboutPanel({ darkMode }: AboutPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [changelogExpanded, setChangelogExpanded] = useState(false);
   
   const apiDocsUrl = import.meta.env.VITE_API_URL 
     ? import.meta.env.VITE_API_URL.replace('/api', '') 
@@ -79,7 +81,7 @@ export function AboutPanel({ darkMode }: AboutPanelProps) {
               <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
                 darkMode ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-600'
               }`}>
-                v1.0
+                v{currentVersion}
               </span>
             </div>
 
@@ -124,6 +126,77 @@ export function AboutPanel({ darkMode }: AboutPanelProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </a>
+            </div>
+
+            {/* What's New Section */}
+            <div className={`rounded-2xl p-5 mb-6 ${
+              darkMode ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-100'
+            }`}>
+              <button
+                onClick={() => setChangelogExpanded(!changelogExpanded)}
+                className="w-full flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    darkMode ? 'bg-green-500/20' : 'bg-green-100'
+                  }`}>
+                    <svg className={`w-5 h-5 ${darkMode ? 'text-green-400' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                      What's New
+                    </h3>
+                    <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      v{changelog[0].version} - {changelog[0].date}
+                    </p>
+                  </div>
+                </div>
+                <svg 
+                  className={`w-5 h-5 transition-transform duration-200 ${
+                    changelogExpanded ? 'rotate-180' : ''
+                  } ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {changelogExpanded && (
+                <div className={`mt-4 space-y-4 max-h-48 overflow-y-auto ${
+                  darkMode ? 'scrollbar-dark' : 'scrollbar-light'
+                }`}>
+                  {changelog.map((entry, index) => (
+                    <div key={entry.version} className={index > 0 ? `pt-4 border-t ${darkMode ? 'border-white/10' : 'border-gray-200'}` : ''}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-sm font-semibold ${darkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                          v{entry.version}
+                        </span>
+                        <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {entry.date}
+                        </span>
+                      </div>
+                      <ul className="space-y-1">
+                        {entry.changes.map((change, i) => (
+                          <li key={i} className={`text-xs flex items-start gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            <span className={`mt-1.5 w-1 h-1 rounded-full flex-shrink-0 ${
+                              change.startsWith('Fixed:') 
+                                ? darkMode ? 'bg-red-400' : 'bg-red-500'
+                                : change.startsWith('Added:')
+                                ? darkMode ? 'bg-green-400' : 'bg-green-500'
+                                : darkMode ? 'bg-blue-400' : 'bg-blue-500'
+                            }`} />
+                            {change}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Links / Resources */}
