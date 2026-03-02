@@ -140,6 +140,27 @@ export class WeatherService {
     }
   }
 
+  async reverseGeocode(lat: number, lon: number): Promise<{ city: string; state?: string; country: string } | null> {
+    const geoUrl = `${OPENWEATHER_BASE_URL}/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${this.apiKey}`;
+    
+    try {
+      const response = await axios.get(geoUrl);
+      
+      if (response.data && response.data.length > 0) {
+        const result = response.data[0];
+        return {
+          city: result.name,
+          state: result.state || undefined,
+          country: result.country
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      return null;
+    }
+  }
+
   async fetchWeather(city: string, units: string = 'metric'): Promise<WeatherData> {
     const normalizedCity = capitalizeWords(city);
     

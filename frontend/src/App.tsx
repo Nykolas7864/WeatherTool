@@ -16,7 +16,8 @@ import {
   fetchTopCities,
   fetchFavorites,
   addFavorite,
-  removeFavorite
+  removeFavorite,
+  reverseGeocode
 } from './services/api';
 import type { WeatherData, WeatherForecast, SearchRecord, CityStats, FavoriteCity, Units } from './types/weather';
 
@@ -189,41 +190,30 @@ function App() {
           
           setIsLoading(true);
           try {
-            const apiKey = import.meta.env.VITE_WEATHER_API_KEY || '';
             // #region agent log
-            console.log('[DEBUG-06a8d5] API key present:', !!apiKey, 'length:', apiKey.length);
+            console.log('[DEBUG-06a8d5] Calling backend reverse geocode API');
             // #endregion
             
-            const url = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`;
+            const location = await reverseGeocode(latitude, longitude);
             // #region agent log
-            console.log('[DEBUG-06a8d5] Fetching reverse geocode URL');
+            console.log('[DEBUG-06a8d5] Reverse geocode result:', location);
             // #endregion
             
-            const response = await fetch(url);
-            // #region agent log
-            console.log('[DEBUG-06a8d5] Response status:', response.status, response.ok);
-            // #endregion
-            
-            const data = await response.json();
-            // #region agent log
-            console.log('[DEBUG-06a8d5] Reverse geocode data:', data);
-            // #endregion
-            
-            if (data && data[0]) {
+            if (location && location.city) {
               // #region agent log
-              console.log('[DEBUG-06a8d5] Calling handleSearch with:', data[0].name);
+              console.log('[DEBUG-06a8d5] Calling handleSearch with:', location.city);
               // #endregion
-              handleSearch(data[0].name);
+              handleSearch(location.city);
             } else {
               // #region agent log
-              console.log('[DEBUG-06a8d5] No data returned from reverse geocode');
+              console.log('[DEBUG-06a8d5] No city returned from reverse geocode');
               // #endregion
               setError('Could not determine your location');
               setIsLoading(false);
             }
           } catch (err) {
             // #region agent log
-            console.log('[DEBUG-06a8d5] Error in geolocation fetch:', err);
+            console.log('[DEBUG-06a8d5] Error in geolocation:', err);
             // #endregion
             setError('Could not determine your location');
             setIsLoading(false);

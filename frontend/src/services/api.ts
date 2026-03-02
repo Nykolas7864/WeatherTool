@@ -65,6 +65,15 @@ export async function removeFavorite(id: number): Promise<void> {
   }
 }
 
+export async function reverseGeocode(lat: number, lon: number): Promise<{ city: string; state?: string; country: string }> {
+  const response = await fetch(`${API_BASE}/weather/reverse-geocode?lat=${lat}&lon=${lon}`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to determine location');
+  }
+  return response.json();
+}
+
 export function getWeatherIconUrl(iconCode: string): string {
   return `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
 }

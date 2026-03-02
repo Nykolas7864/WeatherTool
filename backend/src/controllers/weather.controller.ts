@@ -103,4 +103,35 @@ export class WeatherController {
       res.status(500).json({ error: 'Could not remove favorite' });
     }
   }
+
+  async reverseGeocode(req: Request, res: Response): Promise<void> {
+    try {
+      const { lat, lon } = req.query;
+
+      if (!lat || !lon) {
+        res.status(400).json({ error: 'Latitude and longitude are required' });
+        return;
+      }
+
+      const latitude = parseFloat(lat as string);
+      const longitude = parseFloat(lon as string);
+
+      if (isNaN(latitude) || isNaN(longitude)) {
+        res.status(400).json({ error: 'Invalid latitude or longitude' });
+        return;
+      }
+
+      const location = await weatherService.reverseGeocode(latitude, longitude);
+      
+      if (!location) {
+        res.status(404).json({ error: 'Could not determine location' });
+        return;
+      }
+
+      res.json(location);
+    } catch (error: any) {
+      console.error('Reverse geocode error:', error.message);
+      res.status(500).json({ error: 'Could not determine location' });
+    }
+  }
 }
