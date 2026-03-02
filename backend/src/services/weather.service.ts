@@ -44,8 +44,15 @@ export class WeatherService {
     
     const geoUrl = `${OPENWEATHER_BASE_URL}/geo/1.0/direct?q=${encodedCity}&limit=1&appid=${this.apiKey}`;
     
+    // #region agent log
+    console.log('[DEBUG] Geocoding request:', JSON.stringify({inputCity:city,normalizedCity,encodedCity}));
+    // #endregion
+    
     try {
       const response = await axios.get(geoUrl);
+      // #region agent log
+      console.log('[DEBUG] Geocoding response:', JSON.stringify(response.data));
+      // #endregion
       if (response.data && response.data.length > 0) {
         const result = response.data[0];
         return {
@@ -65,15 +72,28 @@ export class WeatherService {
 
   async fetchWeather(city: string, units: string = 'metric'): Promise<WeatherData> {
     const normalizedCity = capitalizeWords(city);
-    const encodedCity = encodeURIComponent(normalizedCity);
     
     console.log(`>>> NEW REQUEST: User is looking for weather in: ${normalizedCity}`);
 
     const geoLocation = await this.getGeoLocation(city);
-    const state = geoLocation?.state || null;
-
-    const weatherUrl = `${OPENWEATHER_BASE_URL}/data/2.5/weather?q=${encodedCity}&units=${units}&appid=${this.apiKey}`;
     
+    if (!geoLocation) {
+      throw new Error('City not found');
+    }
+    
+    const state = geoLocation.state || null;
+
+    // #region agent log
+    console.log('[DEBUG] fetchWeather - GeoLocation result:', JSON.stringify({inputCity:city,normalizedCity,geoLocation,stateUsed:state}));
+    // #endregion
+
+    // Use lat/lon from geocoding to ensure correct city (fixes ambiguous city names like "Allen")
+    const weatherUrl = `${OPENWEATHER_BASE_URL}/data/2.5/weather?lat=${geoLocation.lat}&lon=${geoLocation.lon}&units=${units}&appid=${this.apiKey}`;
+    
+    // #region agent log
+    console.log('[DEBUG] Weather API URL:', weatherUrl.replace(this.apiKey,'[REDACTED]'));
+    // #endregion
+
     try {
       const response = await axios.get(weatherUrl);
       const data = response.data;
@@ -81,6 +101,10 @@ export class WeatherService {
       const cityNameFromApi = data.name;
       const country = data.sys.country;
       const temperature = data.main.temp;
+      
+      // #region agent log
+      console.log('[DEBUG] Weather API response:', JSON.stringify({cityNameFromApi,country,temperature,coord:data.coord,timezone:data.timezone}));
+      // #endregion
       const description = data.weather[0].description;
       const iconCode = data.weather[0].icon;
       const unitLabel = units === 'imperial' ? '°F' : '°C';
@@ -124,12 +148,25 @@ export class WeatherService {
 
   async fetchForecast(city: string, units: string = 'metric'): Promise<WeatherForecast> {
     const normalizedCity = capitalizeWords(city);
-    const encodedCity = encodeURIComponent(normalizedCity);
 
-    const forecastUrl = `${OPENWEATHER_BASE_URL}/data/2.5/forecast?q=${encodedCity}&units=${units}&appid=${this.apiKey}`;
+    const geoLocation = await this.getGeoLocation(city);
+    
+    if (!geoLocation) {
+      throw new Error('City not found');
+    }
+
+    // Use lat/lon from geocoding to ensure correct city (fixes ambiguous city names like "Allen")
+    const forecastUrl = `${OPENWEATHER_BASE_URL}/data/2.5/forecast?lat=${geoLocation.lat}&lon=${geoLocation.lon}&units=${units}&appid=${this.apiKey}`;
+
+    // #region agent log
+    console.log('[DEBUG] Forecast API URL:', forecastUrl.replace(this.apiKey,'[REDACTED]'));
+    // #endregion
 
     try {
       const response = await axios.get(forecastUrl);
+      // #region agent log
+      console.log('[DEBUG] Forecast API response:', JSON.stringify({cityFromApi:response.data.city?.name,countryFromApi:response.data.city?.country,coord:response.data.city?.coord}));
+      // #endregion
       const data = response.data;
 
       const dailyForecasts = new Map<string, ForecastDay>();
