@@ -171,29 +171,75 @@ function App() {
   };
 
   const handleGeolocation = () => {
+    // #region agent log
+    console.log('[DEBUG-06a8d5] handleGeolocation called');
+    // #endregion
+    
     if ('geolocation' in navigator) {
+      // #region agent log
+      console.log('[DEBUG-06a8d5] Geolocation supported, requesting position...');
+      // #endregion
+      
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
+          // #region agent log
+          console.log('[DEBUG-06a8d5] Got position', { latitude, longitude });
+          // #endregion
+          
           setIsLoading(true);
           try {
-            const response = await fetch(
-              `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${import.meta.env.VITE_WEATHER_API_KEY || ''}`
-            );
+            const apiKey = import.meta.env.VITE_WEATHER_API_KEY || '';
+            // #region agent log
+            console.log('[DEBUG-06a8d5] API key present:', !!apiKey, 'length:', apiKey.length);
+            // #endregion
+            
+            const url = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`;
+            // #region agent log
+            console.log('[DEBUG-06a8d5] Fetching reverse geocode URL');
+            // #endregion
+            
+            const response = await fetch(url);
+            // #region agent log
+            console.log('[DEBUG-06a8d5] Response status:', response.status, response.ok);
+            // #endregion
+            
             const data = await response.json();
+            // #region agent log
+            console.log('[DEBUG-06a8d5] Reverse geocode data:', data);
+            // #endregion
+            
             if (data && data[0]) {
+              // #region agent log
+              console.log('[DEBUG-06a8d5] Calling handleSearch with:', data[0].name);
+              // #endregion
               handleSearch(data[0].name);
+            } else {
+              // #region agent log
+              console.log('[DEBUG-06a8d5] No data returned from reverse geocode');
+              // #endregion
+              setError('Could not determine your location');
+              setIsLoading(false);
             }
           } catch (err) {
+            // #region agent log
+            console.log('[DEBUG-06a8d5] Error in geolocation fetch:', err);
+            // #endregion
             setError('Could not determine your location');
             setIsLoading(false);
           }
         },
-        () => {
+        (error) => {
+          // #region agent log
+          console.log('[DEBUG-06a8d5] Geolocation error:', error.code, error.message);
+          // #endregion
           setError('Location access denied');
         }
       );
     } else {
+      // #region agent log
+      console.log('[DEBUG-06a8d5] Geolocation not supported');
+      // #endregion
       setError('Geolocation is not supported by your browser');
     }
   };
