@@ -172,64 +172,29 @@ function App() {
   };
 
   const handleGeolocation = () => {
-    // #region agent log
-    console.log('[DEBUG-06a8d5] handleGeolocation called');
-    // #endregion
-    
     if ('geolocation' in navigator) {
-      // #region agent log
-      console.log('[DEBUG-06a8d5] Geolocation supported, requesting position...');
-      // #endregion
-      
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
-          // #region agent log
-          console.log('[DEBUG-06a8d5] Got position', { latitude, longitude });
-          // #endregion
-          
           setIsLoading(true);
           try {
-            // #region agent log
-            console.log('[DEBUG-06a8d5] Calling backend reverse geocode API');
-            // #endregion
-            
             const location = await reverseGeocode(latitude, longitude);
-            // #region agent log
-            console.log('[DEBUG-06a8d5] Reverse geocode result:', location);
-            // #endregion
-            
             if (location && location.city) {
-              // #region agent log
-              console.log('[DEBUG-06a8d5] Calling handleSearch with:', location.city);
-              // #endregion
               handleSearch(location.city);
             } else {
-              // #region agent log
-              console.log('[DEBUG-06a8d5] No city returned from reverse geocode');
-              // #endregion
               setError('Could not determine your location');
               setIsLoading(false);
             }
           } catch (err) {
-            // #region agent log
-            console.log('[DEBUG-06a8d5] Error in geolocation:', err);
-            // #endregion
             setError('Could not determine your location');
             setIsLoading(false);
           }
         },
-        (error) => {
-          // #region agent log
-          console.log('[DEBUG-06a8d5] Geolocation error:', error.code, error.message);
-          // #endregion
+        () => {
           setError('Location access denied');
         }
       );
     } else {
-      // #region agent log
-      console.log('[DEBUG-06a8d5] Geolocation not supported');
-      // #endregion
       setError('Geolocation is not supported by your browser');
     }
   };
